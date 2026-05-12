@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const CACHE_NAME = `daggerheart-roller-${CACHE_VERSION}`;
 const ASSETS = [
   './',
@@ -28,13 +28,31 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  const req = event.request;
+  const sameOrigin = new URL(req.url).origin === self.location.origin;
+  if (!sameOrigin) return;
+
+  // Network-first for HTML / navigations so updates flow through after a single reload.
+  // Fall back to cache when offline.
+  if (req.mode === 'navigate' || req.destination === 'document') {
+    event.respondWith(
+      fetch(req).then((res) => {
+        const clone = res.clone();
+        caches.open(CACHE_NAME).then((c) => c.put(req, clone));
+        return res;
+      }).catch(() => caches.match(req).then((r) => r || caches.match('./index.html')))
+    );
+    return;
+  }
+
+  // Cache-first for everything else (icons, manifest, etc.)
   event.respondWith(
-    caches.match(event.request).then((cached) => {
+    caches.match(req).then((cached) => {
       if (cached) return cached;
-      return fetch(event.request).then((res) => {
-        if (res.ok && new URL(event.request.url).origin === self.location.origin) {
+      return fetch(req).then((res) => {
+        if (res.ok) {
           const clone = res.clone();
-          caches.open(CACHE_NAME).then((c) => c.put(event.request, clone));
+          caches.open(CACHE_NAME).then((c) => c.put(req, clone));
         }
         return res;
       }).catch(() => cached);

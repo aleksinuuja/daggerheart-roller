@@ -70,6 +70,15 @@
     text-transform: uppercase;
     color: var(--ink-dim);
   }
+  header .build {
+    margin-top: 2px;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--ink-faint);
+    opacity: 0.55;
+    text-transform: uppercase;
+  }
 
   /* result */
   .result {
@@ -205,6 +214,7 @@
     align-items: center;
     justify-content: center;
     transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    touch-action: manipulation;
   }
   .copy-btn:active { background: var(--bg-3); }
   .copy-btn.copied { color: var(--hope); border-color: rgba(212, 161, 74, 0.4); }
@@ -249,6 +259,9 @@
     cursor: pointer;
     font-family: var(--sans);
     transition: background 0.12s ease;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
   }
   .stepper button:active { background: #3a2c20; }
   .stepper .val {
@@ -277,6 +290,9 @@
     cursor: pointer;
     box-shadow: 0 8px 24px -12px var(--hope-glow), inset 0 1px 0 rgba(255,255,255,0.04);
     transition: transform 0.08s ease, box-shadow 0.2s ease;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
   }
   .roll:active {
     transform: translateY(1px);
@@ -302,7 +318,10 @@
 </head>
 <body>
   <div class="app">
-    <header><h1>Daggerheart</h1></header>
+    <header>
+      <h1>Daggerheart</h1>
+      <div class="build">build v3</div>
+    </header>
 
     <section class="result" aria-live="polite">
       <div class="dice">
@@ -590,7 +609,10 @@
   // -------- Service worker --------
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js').catch(() => {});
+      navigator.serviceWorker.register('./sw.js').then((reg) => {
+        // Force a check for sw.js updates on every load (bypasses 24h timer)
+        reg.update().catch(() => {});
+      }).catch(() => {});
     });
   }
 })();
