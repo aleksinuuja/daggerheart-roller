@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="theme-color" content="#1a1410" />
+<meta name="color-scheme" content="dark" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Daggerheart" />
+<link rel="manifest" href="./manifest.json" />
+<link rel="apple-touch-icon" href="./icons/icon-192.png" />
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
+<title>Daggerheart Roller</title>
+<style>
+  :root {
+    --bg: #1a1410;
+    --bg-2: #221a14;
+    --bg-3: #2c2118;
+    --ink: #ece2d0;
+    --ink-dim: #a89a82;
+    --ink-faint: #6b614f;
+    --hope: #d4a14a;
+    --hope-glow: rgba(212, 161, 74, 0.25);
+    --fear: #a8b0b8;
+    --fear-glow: rgba(168, 176, 184, 0.22);
+    --crit: #f0c060;
+    --line: rgba(236, 226, 208, 0.08);
+    --serif: 'Iowan Old Style', 'Palatino', 'Palatino Linotype', Georgia, 'Times New Roman', serif;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, system-ui, sans-serif;
+    --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); }
+  body {
+    font-family: var(--sans);
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    background:
+      radial-gradient(ellipse at 50% -10%, rgba(212, 161, 74, 0.08), transparent 60%),
+      radial-gradient(ellipse at 50% 110%, rgba(168, 176, 184, 0.05), transparent 60%),
+      var(--bg);
+  }
+  .app {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: calc(var(--safe-top) + 12px) 20px calc(var(--safe-bottom) + 12px);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
+    gap: 12px;
+  }
+  header {
+    text-align: center;
+    padding: 4px 0 0;
+  }
+  header h1 {
+    margin: 0;
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 20px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+
+  /* result */
+  .result {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 12px;
+    padding: 4px 0;
+    min-height: 0;
+  }
+  .dice {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .die {
+    position: relative;
+    aspect-ratio: 5 / 4;
+    border-radius: 16px;
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.18s ease, box-shadow 0.3s ease;
+    overflow: hidden;
+  }
+  .die::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 30%, rgba(255,255,255,0.04), transparent 60%);
+    pointer-events: none;
+  }
+  .die.hope { border-color: rgba(212, 161, 74, 0.32); box-shadow: 0 0 0 1px rgba(212, 161, 74, 0.05) inset, 0 8px 24px -12px var(--hope-glow); }
+  .die.fear { border-color: rgba(168, 176, 184, 0.28); box-shadow: 0 0 0 1px rgba(168, 176, 184, 0.05) inset, 0 8px 24px -12px var(--fear-glow); }
+  .die .value {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: clamp(48px, 13vw, 72px);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .die.hope .value { color: var(--hope); }
+  .die.fear .value { color: var(--fear); }
+  .die .label {
+    margin-top: 6px;
+    font-size: 11px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .die.placeholder .value { color: var(--ink-faint); opacity: 0.35; }
+  .die.placeholder .value::after { content: '·'; }
+  .die.placeholder .value > * { display: none; }
+
+  .total {
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--ink-dim);
+    letter-spacing: 0.04em;
+    font-variant-numeric: tabular-nums;
+    min-height: 1.2em;
+  }
+  .total .vs { color: var(--ink-faint); }
+
+  .outcome {
+    text-align: center;
+    font-family: var(--serif);
+    font-size: clamp(22px, 6.5vw, 30px);
+    line-height: 1.15;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    min-height: 1.3em;
+    padding: 0 8px;
+  }
+  .outcome.hope { color: var(--hope); }
+  .outcome.fear { color: var(--fear); }
+  .outcome.crit {
+    color: var(--crit);
+    text-shadow: 0 0 24px rgba(240, 192, 96, 0.4);
+    letter-spacing: 0.03em;
+  }
+  .outcome.empty { color: var(--ink-faint); font-style: italic; font-weight: 400; font-size: 18px; letter-spacing: 0.08em; text-transform: uppercase; }
+
+  .advdis-detail {
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-faint);
+    letter-spacing: 0.04em;
+    min-height: 1em;
+  }
+  .advdis-detail .applied { color: var(--ink-dim); }
+
+  /* copy box */
+  .copy-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+  }
+  .copy-text {
+    flex: 1;
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-dim);
+    line-height: 1.4;
+    user-select: all;
+    -webkit-user-select: all;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    overflow-wrap: anywhere;
+  }
+  .copy-text.empty { color: var(--ink-faint); font-style: italic; }
+  .copy-btn {
+    flex-shrink: 0;
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    width: 52px;
+    color: var(--ink-dim);
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+  .copy-btn:active { background: var(--bg-3); }
+  .copy-btn.copied { color: var(--hope); border-color: rgba(212, 161, 74, 0.4); }
+  .copy-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* inputs */
+  .inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .field {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 8px 14px;
+  }
+  .field .name {
+    font-size: 13px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+  .stepper {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .stepper button {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--bg-3);
+    color: var(--ink);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    font-family: var(--sans);
+    transition: background 0.12s ease;
+  }
+  .stepper button:active { background: #3a2c20; }
+  .stepper .val {
+    min-width: 48px;
+    text-align: center;
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 18px;
+    color: var(--ink);
+  }
+  .stepper .val.zero { color: var(--ink-faint); }
+
+  /* roll button */
+  .roll {
+    width: 100%;
+    height: 60px;
+    border-radius: 16px;
+    border: 1px solid rgba(212, 161, 74, 0.4);
+    background: linear-gradient(180deg, #3a2a18 0%, #251a10 100%);
+    color: var(--hope);
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 0 8px 24px -12px var(--hope-glow), inset 0 1px 0 rgba(255,255,255,0.04);
+    transition: transform 0.08s ease, box-shadow 0.2s ease;
+  }
+  .roll:active {
+    transform: translateY(1px);
+    box-shadow: 0 4px 12px -8px var(--hope-glow), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+
+  /* roll animation */
+  @keyframes diePop {
+    0%   { transform: scale(0.96); opacity: 0.8; }
+    60%  { transform: scale(1.03); opacity: 1; }
+    100% { transform: scale(1); }
+  }
+  .die.rolled { animation: diePop 0.28s ease-out; }
+
+  @keyframes critPulse {
+    0%, 100% { box-shadow: 0 0 0 1px rgba(240, 192, 96, 0.4) inset, 0 0 32px rgba(240, 192, 96, 0.18); }
+    50%      { box-shadow: 0 0 0 1px rgba(240, 192, 96, 0.6) inset, 0 0 48px rgba(240, 192, 96, 0.35); }
+  }
+  .die.crit { animation: diePop 0.28s ease-out, critPulse 1.4s ease-in-out 0.28s infinite; border-color: rgba(240, 192, 96, 0.55); }
+  .die.crit .value { color: var(--crit) !important; }
+  .die.crit .label { color: rgba(240, 192, 96, 0.7); }
+</style>
+</head>
+<body>
+  <div class="app">
+    <header><h1>Daggerheart</h1></header>
+
+    <section class="result" aria-live="polite">
+      <div class="dice">
+        <div class="die hope placeholder" id="hopeDie">
+          <div class="value" id="hopeVal">·</div>
+          <div class="label">Hope</div>
+        </div>
+        <div class="die fear placeholder" id="fearDie">
+          <div class="value" id="fearVal">·</div>
+          <div class="label">Fear</div>
+        </div>
+      </div>
+      <div class="total" id="totalLine">&nbsp;</div>
+      <div class="outcome empty" id="outcomeLabel">Tap roll</div>
+      <div class="advdis-detail" id="advDisDetail">&nbsp;</div>
+    </section>
+
+    <div class="copy-row">
+      <div class="copy-text empty" id="copyText">Your last roll will appear here</div>
+      <button class="copy-btn" id="copyBtn" aria-label="Copy roll text" disabled>⧉</button>
+    </div>
+
+    <div class="inputs">
+      <div class="field">
+        <div class="name">Modifier</div>
+        <div class="stepper">
+          <button data-step="mod" data-delta="-1" aria-label="Decrease modifier">−</button>
+          <div class="val" id="modVal">0</div>
+          <button data-step="mod" data-delta="1" aria-label="Increase modifier">+</button>
+        </div>
+      </div>
+      <div class="field">
+        <div class="name">Adv / Dis</div>
+        <div class="stepper">
+          <button data-step="adv" data-delta="-1" aria-label="Decrease advantage">−</button>
+          <div class="val" id="advVal">0</div>
+          <button data-step="adv" data-delta="1" aria-label="Increase advantage">+</button>
+        </div>
+      </div>
+      <div class="field">
+        <div class="name">Difficulty</div>
+        <div class="stepper">
+          <button data-step="diff" data-delta="-1" aria-label="Decrease difficulty">−</button>
+          <div class="val" id="diffVal">12</div>
+          <button data-step="diff" data-delta="1" aria-label="Increase difficulty">+</button>
+        </div>
+      </div>
+    </div>
+
+    <button class="roll" id="rollBtn">Roll</button>
+  </div>
+
+<script>
+(() => {
+  'use strict';
+
+  // -------- Roll engine (pure) --------
+  function rollDie(sides) {
+    const buf = new Uint32Array(1);
+    crypto.getRandomValues(buf);
+    // Rejection sampling to avoid modulo bias
+    const limit = Math.floor(0x100000000 / sides) * sides;
+    let v = buf[0];
+    while (v >= limit) {
+      crypto.getRandomValues(buf);
+      v = buf[0];
+    }
+    return (v % sides) + 1;
+  }
+
+  function rollDuality() {
+    return { hope: rollDie(12), fear: rollDie(12) };
+  }
+
+  function rollAdvDis(net) {
+    if (!net) return { dice: [], sign: 0, applied: 0 };
+    const count = Math.abs(net);
+    const sign = net > 0 ? 1 : -1;
+    const dice = [];
+    for (let i = 0; i < count; i++) dice.push(rollDie(6));
+    const highest = Math.max(...dice);
+    return { dice, sign, applied: sign * highest };
+  }
+
+  function resolve({ hope, fear, modifier, advDisApplied, difficulty }) {
+    const total = hope + fear + modifier + advDisApplied;
+    let outcome;
+    if (hope === fear) {
+      outcome = 'Critical Success';
+    } else if (total >= difficulty) {
+      outcome = hope > fear ? 'Success with Hope' : 'Success with Fear';
+    } else {
+      outcome = hope > fear ? 'Failure with Hope' : 'Failure with Fear';
+    }
+    return { total, outcome };
+  }
+
+  function fmtSigned(n) {
+    return n >= 0 ? `+${n}` : `${n}`;
+  }
+
+  function formatCopy({ hope, fear, modifier, advDis, difficulty, outcome }) {
+    const hasMod = modifier !== 0;
+    const hasAdv = advDis.applied !== 0;
+    const modPart = (hasMod || hasAdv) ? ` ${fmtSigned(modifier)}` : '';
+    const punct = outcome === 'Critical Success' ? '!' : '.';
+    let s = `Rolled Hope ${hope} / Fear ${fear}${modPart} vs difficulty ${difficulty}. ${outcome}${punct}`;
+    if (hasAdv) {
+      const label = advDis.sign > 0 ? 'Advantage' : 'Disadvantage';
+      s += ` (${label} d6: ${fmtSigned(advDis.applied)})`;
+    }
+    return s;
+  }
+
+  // -------- State (persisted) --------
+  const STORE_KEY = 'daggerheart-roller:v1';
+  const defaults = { mod: 0, adv: 0, diff: 12 };
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (!raw) return { ...defaults };
+      const parsed = JSON.parse(raw);
+      return {
+        mod: Number.isInteger(parsed.mod) ? parsed.mod : defaults.mod,
+        adv: Number.isInteger(parsed.adv) ? parsed.adv : defaults.adv,
+        diff: Number.isInteger(parsed.diff) ? parsed.diff : defaults.diff,
+      };
+    } catch {
+      return { ...defaults };
+    }
+  }
+
+  function saveState() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch {}
+  }
+
+  const state = loadState();
+
+  // -------- DOM refs --------
+  const $ = (id) => document.getElementById(id);
+  const hopeDie = $('hopeDie'), fearDie = $('fearDie');
+  const hopeVal = $('hopeVal'), fearVal = $('fearVal');
+  const totalLine = $('totalLine');
+  const outcomeLabel = $('outcomeLabel');
+  const advDisDetail = $('advDisDetail');
+  const copyText = $('copyText');
+  const copyBtn = $('copyBtn');
+  const rollBtn = $('rollBtn');
+  const modValEl = $('modVal'), advValEl = $('advVal'), diffValEl = $('diffVal');
+
+  function renderInputs() {
+    modValEl.textContent = fmtSigned(state.mod);
+    advValEl.textContent = state.adv > 0 ? `+${state.adv}` : `${state.adv}`;
+    diffValEl.textContent = `${state.diff}`;
+    modValEl.classList.toggle('zero', state.mod === 0);
+    advValEl.classList.toggle('zero', state.adv === 0);
+  }
+
+  function step(field, delta) {
+    if (field === 'mod') state.mod = Math.max(-20, Math.min(20, state.mod + delta));
+    else if (field === 'adv') state.adv = Math.max(-5, Math.min(5, state.adv + delta));
+    else if (field === 'diff') state.diff = Math.max(1, Math.min(40, state.diff + delta));
+    renderInputs();
+    saveState();
+  }
+
+  document.querySelectorAll('button[data-step]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      step(btn.dataset.step, parseInt(btn.dataset.delta, 10));
+    });
+  });
+
+  // -------- Roll handling --------
+  let lastCopy = '';
+
+  function outcomeClass(outcome) {
+    if (outcome === 'Critical Success') return 'crit';
+    if (outcome.endsWith('Hope')) return 'hope';
+    return 'fear';
+  }
+
+  function doRoll() {
+    const { hope, fear } = rollDuality();
+    const advDis = rollAdvDis(state.adv);
+    const { total, outcome } = resolve({
+      hope, fear,
+      modifier: state.mod,
+      advDisApplied: advDis.applied,
+      difficulty: state.diff,
+    });
+
+    // Dice
+    hopeDie.classList.remove('placeholder', 'rolled', 'crit');
+    fearDie.classList.remove('placeholder', 'rolled', 'crit');
+    hopeVal.textContent = String(hope);
+    fearVal.textContent = String(fear);
+    // Reflow to retrigger animation
+    void hopeDie.offsetWidth; void fearDie.offsetWidth;
+    if (outcome === 'Critical Success') {
+      hopeDie.classList.add('crit');
+      fearDie.classList.add('crit');
+    } else {
+      hopeDie.classList.add('rolled');
+      fearDie.classList.add('rolled');
+    }
+
+    // Total line
+    const modPart = state.mod === 0 ? '' : ` ${fmtSigned(state.mod)}`;
+    const advPart = advDis.applied === 0 ? '' : ` ${fmtSigned(advDis.applied)}`;
+    totalLine.innerHTML = `${hope} + ${fear}${modPart}${advPart} = <strong>${total}</strong> <span class="vs">vs</span> ${state.diff}`;
+
+    // Outcome
+    outcomeLabel.className = `outcome ${outcomeClass(outcome)}`;
+    outcomeLabel.textContent = outcome === 'Critical Success' ? 'Critical Success!' : outcome;
+
+    // Adv/dis detail
+    if (advDis.dice.length) {
+      const label = advDis.sign > 0 ? 'Advantage' : 'Disadvantage';
+      const diceStr = advDis.dice.join(', ');
+      advDisDetail.innerHTML = `${label} d6: [${diceStr}] → <span class="applied">${fmtSigned(advDis.applied)}</span>`;
+    } else {
+      advDisDetail.innerHTML = '&nbsp;';
+    }
+
+    // Copy string
+    lastCopy = formatCopy({
+      hope, fear,
+      modifier: state.mod,
+      advDis,
+      difficulty: state.diff,
+      outcome,
+    });
+    copyText.textContent = lastCopy;
+    copyText.classList.remove('empty');
+    copyBtn.disabled = false;
+    copyBtn.classList.remove('copied');
+    copyBtn.textContent = '⧉';
+  }
+
+  rollBtn.addEventListener('click', doRoll);
+
+  async function doCopy() {
+    if (!lastCopy) return;
+    let ok = false;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(lastCopy);
+        ok = true;
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = lastCopy;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+    } catch { ok = false; }
+    if (ok) {
+      copyBtn.classList.add('copied');
+      copyBtn.textContent = '✓';
+      setTimeout(() => {
+        copyBtn.classList.remove('copied');
+        copyBtn.textContent = '⧉';
+      }, 1400);
+    }
+  }
+  copyBtn.addEventListener('click', doCopy);
+
+  // Keyboard: space / enter to roll, c to copy
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.code === 'Space' || e.code === 'Enter') {
+      e.preventDefault();
+      doRoll();
+    } else if (e.code === 'KeyC' && !e.metaKey && !e.ctrlKey) {
+      doCopy();
+    }
+  });
+
+  renderInputs();
+
+  // -------- Service worker --------
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    });
+  }
+})();
+</script>
+</body>
+</html>
